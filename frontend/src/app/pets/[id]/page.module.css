@@ -1,0 +1,31 @@
+.back {
+  display: inline-block;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+}
+
+.name {
+  margin-bottom: 1.5rem;
+  text-transform: capitalize;
+}
+
+.details {
+  display: grid;
+  grid-template-columns: 10rem 1fr;
+  gap: 0.5rem 1rem;
+  margin: 0 0 2rem;
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.details dt {
+  font-weight: 600;
+  color: #555;
+}
+
+.details dd {
+  margin: 0;
+  text-transform: capitalize;
+}
