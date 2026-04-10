@@ -1,0 +1,33 @@
+.filter {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.button,
+.buttonActive {
+  padding: 0.5rem 1rem;
+  border: 1px solid #d0d0d0;
+  border-radius: 6px;
+  background: #fff;
+  color: #333;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.15s, border-color 0.15s;
+}
+
+.button:hover {
+  background: #f0f0f0;
+  border-color: #bbb;
+}
+
+.buttonActive {
+  background: #0066cc;
+  color: #fff;
+  border-color: #0066cc;
+}
+
+.buttonActive:hover {
+  background: #0055aa;
+  border-color: #0055aa;
+}
