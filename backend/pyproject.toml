@@ -28,5 +28,10 @@ dev = [
     "aiosqlite>=0.20,<1.0",
 ]
 
+[tool.uv]
+# Everyone uses the same uv: local runs, CI (setup-uv reads this) and the Docker image.
+# When bumping it, also change the uv image tag in backend/Dockerfile.
+required-version = "==0.13.7"
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
