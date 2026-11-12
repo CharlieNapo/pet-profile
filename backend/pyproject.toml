@@ -28,5 +28,9 @@ dev = [
     "aiosqlite>=0.20,<1.0",
 ]
 
+[tool.uv]
+# Keep in step with the uv image tag in backend/Dockerfile.
+required-version = "==0.13.7"
+
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

@@ -1,0 +1,124 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.head_ref || github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  backend:
+    name: Backend lockfile and tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      # No version input: setup-uv reads required-version from backend/pyproject.toml.
+      - name: Install uv
+        uses: astral-sh/setup-uv@68559e99cc807c1eb7e9238fd43a15bba460eec2 # v10.3.3
+        with:
+          working-directory: backend
+          python-version: "3.12"
+          enable-cache: true
+          cache-dependency-glob: uv.lock
+
+      - name: Check uv.lock matches pyproject.toml
+        run: uv lock --check
+
+      - name: Check no package is marked never-install
+        run: |
+          if grep -n "python_version < '0'" uv.lock; then
+            echo "::error file=backend/uv.lock::uv.lock has the never-install marker; run plain 'uv lock' again"
+            exit 1
+          fi
+
+      - name: Install dependencies
+        run: uv sync --locked --group dev
+
+      - name: Run tests
+        run: uv run --locked pytest
+
+  frontend:
+    name: Frontend type check and build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Install Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version-file: frontend/.node-version
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Type check
+        run: npx --no-install tsc --noEmit
+
+      - name: Build
+        run: npm run build
+
+  smoke:
+    name: Docker Compose smoke test
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - name: Build and start all services
+        run: docker compose up --build --detach --wait --wait-timeout 300
+
+      - name: Check the backend responds
+        run: |
+          set -euo pipefail
+          curl --fail --silent --show-error http://localhost:8000/health
+          curl --fail --silent --show-error http://localhost:8000/api/pets > pets.json
+          test "$(jq length pets.json)" -gt 0
+
+      - name: Check the frontend renders pets from the backend
+        run: |
+          set -euo pipefail
+          pet_id=$(jq -r '.[0].id' pets.json)
+          pet_name=$(jq -r '.[0].name' pets.json)
+          curl --fail --silent --show-error --retry 10 --retry-delay 3 --retry-all-errors \
+            http://localhost:3000/ > home.html
+          grep -q "$pet_name" home.html
+          curl --fail --silent --show-error "http://localhost:3000/pets/$pet_id" > pet.html
+          grep -q "$pet_name" pet.html
+
+      - name: Show service logs
+        if: failure()
+        run: docker compose logs
+
+      - name: Stop services
+        if: always()
+        run: docker compose down --volumes
